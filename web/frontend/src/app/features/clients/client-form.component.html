@@ -37,9 +37,13 @@
         <textarea id="notes" class="textarea" formControlName="notes" placeholder="Preferences, allergies, reminders…"></textarea>
       </div>
 
+      @if (error()) {
+        <div class="alert alert-error">{{ error() }}</div>
+      }
+
       <div class="form-actions">
         <button type="button" class="btn btn-ghost" (click)="cancel()">Cancel</button>
-        <button type="submit" class="btn btn-primary">{{ isEdit ? 'Save changes' : 'Create client' }}</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ isEdit ? 'Save changes' : 'Create client' }}</button>
       </div>
     </form>
   </div>

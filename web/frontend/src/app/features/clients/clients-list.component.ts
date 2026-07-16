@@ -1,7 +1,8 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Client } from '../../core/models';
+import { ClientsApiService } from '../../core/services/clients-api.service';
 
 @Component({
   selector: 'app-clients-list',
@@ -11,16 +12,12 @@ import { Client } from '../../core/models';
   styleUrl: './clients-list.component.css',
 })
 export class ClientsListComponent implements OnInit {
+  private readonly api = inject(ClientsApiService);
+
   readonly query = signal('');
 
-  // Mock data — service_agent wires this signal to GET /api/clients?q=.
-  readonly clients = signal<Client[]>([
-    { id: 'c1', name: 'Maya Chen', phone: '(415) 555-0132', email: 'maya.chen@email.com', notes: 'Prefers morning slots.', createdAt: '2025-11-02' },
-    { id: 'c2', name: 'Liam Foster', phone: '(415) 555-0177', email: 'liam.f@email.com', notes: '', createdAt: '2025-12-14' },
-    { id: 'c3', name: 'Priya Nair', phone: '(628) 555-0104', email: 'priya.nair@email.com', notes: 'Allergic to certain dyes — patch test.', createdAt: '2026-01-08' },
-    { id: 'c4', name: 'Diego Alvarez', phone: '(510) 555-0199', email: 'diego.a@email.com', notes: '', createdAt: '2026-02-19' },
-    { id: 'c5', name: 'Sara Whitman', phone: '(415) 555-0146', email: 'sara.whitman@email.com', notes: 'Referred by Maya.', createdAt: '2026-03-03' },
-  ]);
+  // Wired to GET /api/v1/clients. The search box filters the loaded set client-side.
+  readonly clients = signal<Client[]>([]);
 
   readonly filtered = computed(() => {
     const q = this.query().trim().toLowerCase();
@@ -34,6 +31,10 @@ export class ClientsListComponent implements OnInit {
 
   ngOnInit(): void {
     this.query.set(this.route.snapshot.queryParamMap.get('q') ?? '');
+    this.api.list().subscribe({
+      next: (clients) => this.clients.set(clients),
+      error: () => this.clients.set([]),
+    });
   }
 
   onSearch(value: string): void {

@@ -34,9 +34,13 @@
         </div>
       </div>
 
+      @if (error()) {
+        <div class="alert alert-error">{{ error() }}</div>
+      }
+
       <div class="form-actions">
         <a class="btn btn-ghost" routerLink="/services">Cancel</a>
-        <button type="submit" class="btn btn-primary">{{ isEdit ? 'Save changes' : 'Create service' }}</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ isEdit ? 'Save changes' : 'Create service' }}</button>
       </div>
     </form>
   </div>

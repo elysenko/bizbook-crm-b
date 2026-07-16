@@ -1,8 +1,8 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Service } from '../../core/models';
+import { ServicesApiService } from '../../core/services/services-api.service';
 
 @Component({
   selector: 'app-service-form',
@@ -12,16 +12,12 @@ import { Service } from '../../core/models';
   styleUrl: './service-form.component.css',
 })
 export class ServiceFormComponent implements OnInit {
-  readonly serviceId = signal<string | null>(null);
-  form: FormGroup;
+  private readonly api = inject(ServicesApiService);
 
-  // Mock lookup source for edit mode — service_agent replaces with GET /api/services.
-  readonly services = signal<Service[]>([
-    { id: 's1', name: 'Haircut', durationMin: 30, priceCents: 2500, createdAt: '2025-10-01' },
-    { id: 's2', name: 'Beard Trim', durationMin: 20, priceCents: 1500, createdAt: '2025-10-01' },
-    { id: 's3', name: 'Color & Style', durationMin: 90, priceCents: 8500, createdAt: '2025-10-05' },
-    { id: 's4', name: 'Deep Conditioning', durationMin: 45, priceCents: 4000, createdAt: '2025-10-12' },
-  ]);
+  readonly serviceId = signal<string | null>(null);
+  readonly error = signal('');
+  readonly saving = signal(false);
+  form: FormGroup;
 
   constructor(
     private fb: FormBuilder,
@@ -43,14 +39,22 @@ export class ServiceFormComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.serviceId.set(id);
-      const existing = this.services().find((s) => s.id === id);
-      if (existing) {
-        this.form.patchValue({
-          name: existing.name,
-          durationMin: existing.durationMin,
-          price: existing.priceCents / 100,
-        });
-      }
+      // The API exposes list-only reads for services; find the record in the catalog.
+      this.api.list().subscribe({
+        next: (services) => {
+          const existing = services.find((s) => s.id === id);
+          if (existing) {
+            this.form.patchValue({
+              name: existing.name,
+              durationMin: existing.durationMin,
+              price: existing.priceCents / 100,
+            });
+          } else {
+            this.error.set('Service not found.');
+          }
+        },
+        error: (err) => this.error.set(this.messageFrom(err) || 'Could not load service.'),
+      });
     }
   }
 
@@ -59,7 +63,28 @@ export class ServiceFormComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-    // Mockup: no persistence — navigate back to the catalog.
-    this.router.navigate(['/services']);
+    const raw = this.form.value;
+    const dto = {
+      name: raw.name,
+      durationMin: Number(raw.durationMin),
+      priceCents: Math.round(Number(raw.price) * 100),
+    };
+    this.error.set('');
+    this.saving.set(true);
+
+    const id = this.serviceId();
+    const request$ = id ? this.api.update(id, dto) : this.api.create(dto);
+    request$.subscribe({
+      next: () => this.router.navigate(['/services']),
+      error: (err) => {
+        this.saving.set(false);
+        this.error.set(this.messageFrom(err) || 'Could not save service.');
+      },
+    });
+  }
+
+  private messageFrom(err: unknown): string {
+    const msg = (err as { error?: { message?: string | string[] } })?.error?.message;
+    return Array.isArray(msg) ? msg.join(', ') : (msg ?? '');
   }
 }

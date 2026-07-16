@@ -40,7 +40,11 @@
         }
       </div>
 
-      <button type="submit" class="btn btn-primary btn-block">Create account</button>
+      @if (error()) {
+        <div class="alert alert-error">{{ error() }}</div>
+      }
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="loading()">Create account</button>
     </form>
 
     <p class="auth-alt">

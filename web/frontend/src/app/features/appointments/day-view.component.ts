@@ -1,8 +1,9 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Appointment, AppointmentStatus } from '../../core/models';
-import { formatMoney, prettyDate, shiftISO, toISODate, todayISO } from '../../core/date-util';
+import { formatMoney, prettyDate, toISODate, todayISO } from '../../core/date-util';
+import { AppointmentsApiService } from '../../core/services/appointments-api.service';
 
 @Component({
   selector: 'app-day-view',
@@ -12,29 +13,18 @@ import { formatMoney, prettyDate, shiftISO, toISODate, todayISO } from '../../co
   styleUrl: './day-view.component.css',
 })
 export class DayViewComponent implements OnInit {
+  private readonly api = inject(AppointmentsApiService);
+
   readonly selectedDate = signal<string>(todayISO());
   readonly money = formatMoney;
   readonly prettyDate = prettyDate;
   readonly statusOptions: AppointmentStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show'];
 
-  // Mock data — service_agent wires this signal to GET /api/appointments?date=.
-  readonly appointments = signal<Appointment[]>([
-    { id: 'a1', clientId: 'c1', clientName: 'Maya Chen', clientPhone: '(415) 555-0132', serviceId: 's1', serviceName: 'Haircut', priceCents: 2500, date: todayISO(), startTime: '09:00', status: 'scheduled' },
-    { id: 'a2', clientId: 'c2', clientName: 'Liam Foster', clientPhone: '(415) 555-0177', serviceId: 's2', serviceName: 'Beard Trim', priceCents: 1500, date: todayISO(), startTime: '09:30', status: 'completed' },
-    { id: 'a3', clientId: 'c3', clientName: 'Priya Nair', clientPhone: '(628) 555-0104', serviceId: 's3', serviceName: 'Color & Style', priceCents: 8500, date: todayISO(), startTime: '11:00', status: 'scheduled' },
-    { id: 'a4', clientId: 'c4', clientName: 'Diego Alvarez', clientPhone: '(510) 555-0199', serviceId: 's1', serviceName: 'Haircut', priceCents: 2500, date: todayISO(), startTime: '13:30', status: 'scheduled' },
-    { id: 'a5', clientId: 'c5', clientName: 'Sara Whitman', clientPhone: '(415) 555-0146', serviceId: 's4', serviceName: 'Deep Conditioning', priceCents: 4000, date: todayISO(), startTime: '15:00', status: 'no_show' },
-    { id: 'a6', clientId: 'c2', clientName: 'Liam Foster', clientPhone: '(415) 555-0177', serviceId: 's1', serviceName: 'Haircut', priceCents: 2500, date: shiftISO(1), startTime: '10:00', status: 'scheduled' },
-    { id: 'a7', clientId: 'c3', clientName: 'Priya Nair', clientPhone: '(628) 555-0104', serviceId: 's2', serviceName: 'Beard Trim', priceCents: 1500, date: shiftISO(1), startTime: '12:30', status: 'scheduled' },
-    { id: 'a8', clientId: 'c1', clientName: 'Maya Chen', clientPhone: '(415) 555-0132', serviceId: 's3', serviceName: 'Color & Style', priceCents: 8500, date: shiftISO(1), startTime: '14:00', status: 'scheduled' },
-    { id: 'a9', clientId: 'c4', clientName: 'Diego Alvarez', clientPhone: '(510) 555-0199', serviceId: 's4', serviceName: 'Deep Conditioning', priceCents: 4000, date: shiftISO(-1), startTime: '11:30', status: 'completed' },
-    { id: 'a10', clientId: 'c5', clientName: 'Sara Whitman', clientPhone: '(415) 555-0146', serviceId: 's1', serviceName: 'Haircut', priceCents: 2500, date: shiftISO(-1), startTime: '16:00', status: 'cancelled' },
-  ]);
+  // Wired to GET /api/v1/appointments?date=. Holds the selected day's appointments.
+  readonly appointments = signal<Appointment[]>([]);
 
   readonly dayList = computed(() =>
-    this.appointments()
-      .filter((a) => a.date === this.selectedDate())
-      .sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [...this.appointments()].sort((a, b) => a.startTime.localeCompare(b.startTime)),
   );
 
   readonly prettySelected = computed(() => prettyDate(this.selectedDate()));
@@ -43,6 +33,14 @@ export class DayViewComponent implements OnInit {
 
   ngOnInit(): void {
     this.selectedDate.set(this.route.snapshot.queryParamMap.get('date') ?? todayISO());
+    this.load();
+  }
+
+  private load(): void {
+    this.api.byDate(this.selectedDate()).subscribe({
+      next: (appts) => this.appointments.set(appts),
+      error: () => this.appointments.set([]),
+    });
   }
 
   goToDate(iso: string): void {
@@ -54,6 +52,7 @@ export class DayViewComponent implements OnInit {
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
+    this.load();
   }
 
   shiftDay(days: number): void {
@@ -64,8 +63,12 @@ export class DayViewComponent implements OnInit {
   }
 
   setStatus(id: string, status: AppointmentStatus): void {
-    this.appointments.update((list) =>
-      list.map((a) => (a.id === id ? { ...a, status } : a)),
-    );
+    this.api.updateStatus(id, status).subscribe({
+      next: (updated) =>
+        this.appointments.update((list) =>
+          list.map((a) => (a.id === id ? updated : a)),
+        ),
+      error: () => this.load(),
+    });
   }
 }

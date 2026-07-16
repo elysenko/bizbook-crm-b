@@ -1,18 +1,26 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { Observable, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { Role, User } from '../models';
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
 
+interface AuthResponse {
+  user: User;
+  token: string;
+}
+
 /**
- * Mockup auth service. Persists a JWT-ish token + user profile in localStorage and
- * exposes reactive role state so the shell can render role-aware navigation.
- * The service_agent stage rewires login/signup/logout to /api/auth/* — the shape
- * (token in localStorage, user signal, role computed) is kept stable for that wiring.
+ * Auth service wired to the NestJS auth API (`/api/v1/auth/*`). Persists the JWT +
+ * user profile in localStorage and exposes reactive role state so the shell can
+ * render role-aware navigation. Token is attached to API calls by authInterceptor.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly http = inject(HttpClient);
   private readonly _user = signal<User | null>(this.readUser());
 
   readonly user = this._user.asReadonly();
@@ -22,27 +30,36 @@ export class AuthService {
 
   constructor(private router: Router) {}
 
-  /** Mock login. Role is inferred from the email so reviewers can preview both roles. */
-  login(email: string, _password: string): void {
-    const role: Role = /staff|user\b/i.test(email) ? 'USER' : 'ADMIN';
-    const name = this.nameFromEmail(email);
-    this.setSession({ id: 'u_' + role.toLowerCase(), name, email, role }, 'mock.jwt.token');
-    this.router.navigate(['/today']);
+  /** Login against POST /api/v1/auth/login. Persists session on success. */
+  login(email: string, password: string): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${environment.apiUrl}/auth/login`, { email, password })
+      .pipe(tap((res) => this.setSession(res.user, res.token)));
   }
 
-  /** Mock signup. First-signup-is-admin is a backend rule; the mockup grants ADMIN. */
-  signup(name: string, email: string, _password: string): void {
-    this.setSession({ id: 'u_new', name, email, role: 'ADMIN' }, 'mock.jwt.token');
-    this.router.navigate(['/today']);
+  /**
+   * Signup against POST /api/v1/auth/signup. The first account created in the
+   * system becomes ADMIN; subsequent public signups become USER (server rule).
+   */
+  signup(name: string, email: string, password: string): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${environment.apiUrl}/auth/signup`, { name, email, password })
+      .pipe(tap((res) => this.setSession(res.user, res.token)));
   }
 
-  /** Demo bypass — logs in as a fully-privileged ADMIN so every screen is reviewable. */
-  demoLogin(): void {
-    this.setSession(
-      { id: 'u_demo', name: 'Demo Owner', email: 'owner@bizbook.demo', role: 'ADMIN' },
-      'demo.jwt.token',
-    );
-    this.router.navigate(['/today']);
+  /** Demo bypass — logs in with the seeded ADMIN owner credentials. */
+  demoLogin(): Observable<AuthResponse> {
+    return this.login('admin@bizbook.demo', 'admin1234');
+  }
+
+  /** Refresh the cached profile from GET /api/v1/auth/me (validates the token). */
+  refreshMe(): void {
+    this.http.get<User>(`${environment.apiUrl}/auth/me`).subscribe({
+      next: (user) => this.setUser(user),
+      error: () => {
+        /* interceptor handles 401 → /login */
+      },
+    });
   }
 
   logout(): void {
@@ -58,6 +75,10 @@ export class AuthService {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem('access_token', token);
     localStorage.setItem('isAuthenticated', 'true');
+    this.setUser(user);
+  }
+
+  private setUser(user: User): void {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     this._user.set(user);
   }
@@ -69,10 +90,5 @@ export class AuthService {
     } catch {
       return null;
     }
-  }
-
-  private nameFromEmail(email: string): string {
-    const local = (email.split('@')[0] || 'Member').replace(/[._-]+/g, ' ');
-    return local.replace(/\b\w/g, (c) => c.toUpperCase());
   }
 }

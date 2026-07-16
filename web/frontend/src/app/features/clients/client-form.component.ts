@@ -1,8 +1,8 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Client } from '../../core/models';
+import { ClientsApiService } from '../../core/services/clients-api.service';
 
 @Component({
   selector: 'app-client-form',
@@ -12,17 +12,12 @@ import { Client } from '../../core/models';
   styleUrl: './client-form.component.css',
 })
 export class ClientFormComponent implements OnInit {
-  readonly clientId = signal<string | null>(null);
-  form: FormGroup;
+  private readonly api = inject(ClientsApiService);
 
-  // Mock lookup source for edit mode — service_agent replaces with GET /api/clients/:id.
-  readonly clients = signal<Client[]>([
-    { id: 'c1', name: 'Maya Chen', phone: '(415) 555-0132', email: 'maya.chen@email.com', notes: 'Prefers morning slots.', createdAt: '2025-11-02' },
-    { id: 'c2', name: 'Liam Foster', phone: '(415) 555-0177', email: 'liam.f@email.com', notes: '', createdAt: '2025-12-14' },
-    { id: 'c3', name: 'Priya Nair', phone: '(628) 555-0104', email: 'priya.nair@email.com', notes: 'Allergic to certain dyes — patch test.', createdAt: '2026-01-08' },
-    { id: 'c4', name: 'Diego Alvarez', phone: '(510) 555-0199', email: 'diego.a@email.com', notes: '', createdAt: '2026-02-19' },
-    { id: 'c5', name: 'Sara Whitman', phone: '(415) 555-0146', email: 'sara.whitman@email.com', notes: 'Referred by Maya.', createdAt: '2026-03-03' },
-  ]);
+  readonly clientId = signal<string | null>(null);
+  readonly error = signal('');
+  readonly saving = signal(false);
+  form: FormGroup;
 
   constructor(
     private fb: FormBuilder,
@@ -45,15 +40,17 @@ export class ClientFormComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.clientId.set(id);
-      const existing = this.clients().find((c) => c.id === id);
-      if (existing) {
-        this.form.patchValue({
-          name: existing.name,
-          phone: existing.phone,
-          email: existing.email ?? '',
-          notes: existing.notes ?? '',
-        });
-      }
+      // Edit mode — load the record from GET /api/v1/clients/:id.
+      this.api.get(id).subscribe({
+        next: (existing) =>
+          this.form.patchValue({
+            name: existing.name,
+            phone: existing.phone,
+            email: existing.email ?? '',
+            notes: existing.notes ?? '',
+          }),
+        error: (err) => this.error.set(this.messageFrom(err) || 'Could not load client.'),
+      });
     }
   }
 
@@ -62,16 +59,34 @@ export class ClientFormComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-    // Mockup: no persistence — navigate to reflect the created/updated record.
-    if (this.isEdit) {
-      this.router.navigate(['/clients', this.clientId()]);
-    } else {
-      this.router.navigate(['/clients']);
-    }
+    const raw = this.form.value;
+    const dto = {
+      name: raw.name,
+      phone: raw.phone,
+      email: raw.email?.trim() ? raw.email.trim() : undefined,
+      notes: raw.notes?.trim() ? raw.notes.trim() : undefined,
+    };
+    this.error.set('');
+    this.saving.set(true);
+
+    const id = this.clientId();
+    const request$ = id ? this.api.update(id, dto) : this.api.create(dto);
+    request$.subscribe({
+      next: (client) => this.router.navigate(['/clients', client.id]),
+      error: (err) => {
+        this.saving.set(false);
+        this.error.set(this.messageFrom(err) || 'Could not save client.');
+      },
+    });
   }
 
   cancel(): void {
     if (this.isEdit) this.router.navigate(['/clients', this.clientId()]);
     else this.router.navigate(['/clients']);
+  }
+
+  private messageFrom(err: unknown): string {
+    const msg = (err as { error?: { message?: string | string[] } })?.error?.message;
+    return Array.isArray(msg) ? msg.join(', ') : (msg ?? '');
   }
 }

@@ -24,7 +24,11 @@
         }
       </div>
 
-      <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+      @if (error()) {
+        <div class="alert alert-error">{{ error() }}</div>
+      }
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="loading()">Sign in</button>
     </form>
 
     <p class="auth-alt">

@@ -1,9 +1,12 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Appointment, Client, Service } from '../../core/models';
 import { businessSlots, formatMoney, prettyDate, todayISO } from '../../core/date-util';
+import { ClientsApiService } from '../../core/services/clients-api.service';
+import { ServicesApiService } from '../../core/services/services-api.service';
+import { AppointmentsApiService } from '../../core/services/appointments-api.service';
 
 @Component({
   selector: 'app-book-appointment',
@@ -13,6 +16,10 @@ import { businessSlots, formatMoney, prettyDate, todayISO } from '../../core/dat
   styleUrl: './book-appointment.component.css',
 })
 export class BookAppointmentComponent implements OnInit {
+  private readonly clientsApi = inject(ClientsApiService);
+  private readonly servicesApi = inject(ServicesApiService);
+  private readonly appointmentsApi = inject(AppointmentsApiService);
+
   readonly slots = businessSlots();
   readonly money = formatMoney;
   readonly prettyDate = prettyDate;
@@ -25,30 +32,15 @@ export class BookAppointmentComponent implements OnInit {
 
   readonly error = signal('');
   readonly success = signal(false);
+  readonly submitting = signal(false);
 
-  // Mock data — service_agent wires these to GET /api/clients and GET /api/services.
-  readonly clients = signal<Client[]>([
-    { id: 'c1', name: 'Maya Chen', phone: '(415) 555-0132', createdAt: '2025-11-02' },
-    { id: 'c2', name: 'Liam Foster', phone: '(415) 555-0177', createdAt: '2025-12-14' },
-    { id: 'c3', name: 'Priya Nair', phone: '(628) 555-0104', createdAt: '2026-01-08' },
-    { id: 'c4', name: 'Diego Alvarez', phone: '(510) 555-0199', createdAt: '2026-02-19' },
-    { id: 'c5', name: 'Sara Whitman', phone: '(415) 555-0146', createdAt: '2026-03-03' },
-  ]);
+  // Wired to GET /api/v1/clients and GET /api/v1/services.
+  readonly clients = signal<Client[]>([]);
+  readonly services = signal<Service[]>([]);
 
-  readonly services = signal<Service[]>([
-    { id: 's1', name: 'Haircut', durationMin: 30, priceCents: 2500, createdAt: '2025-10-01' },
-    { id: 's2', name: 'Beard Trim', durationMin: 20, priceCents: 1500, createdAt: '2025-10-01' },
-    { id: 's3', name: 'Color & Style', durationMin: 90, priceCents: 8500, createdAt: '2025-10-05' },
-    { id: 's4', name: 'Deep Conditioning', durationMin: 45, priceCents: 4000, createdAt: '2025-10-12' },
-  ]);
-
-  // Existing bookings used to compute taken slots (active = status !== cancelled).
-  readonly appointments = signal<Appointment[]>([
-    { id: 'a1', clientId: 'c1', clientName: 'Maya Chen', clientPhone: '(415) 555-0132', serviceId: 's1', serviceName: 'Haircut', priceCents: 2500, date: todayISO(), startTime: '09:00', status: 'scheduled' },
-    { id: 'a2', clientId: 'c2', clientName: 'Liam Foster', clientPhone: '(415) 555-0177', serviceId: 's2', serviceName: 'Beard Trim', priceCents: 1500, date: todayISO(), startTime: '09:30', status: 'completed' },
-    { id: 'a3', clientId: 'c3', clientName: 'Priya Nair', clientPhone: '(628) 555-0104', serviceId: 's3', serviceName: 'Color & Style', priceCents: 8500, date: todayISO(), startTime: '11:00', status: 'scheduled' },
-    { id: 'a4', clientId: 'c4', clientName: 'Diego Alvarez', clientPhone: '(510) 555-0199', serviceId: 's1', serviceName: 'Haircut', priceCents: 2500, date: todayISO(), startTime: '13:30', status: 'scheduled' },
-  ]);
+  // Existing bookings for the selected date — used to compute taken slots
+  // (active = status !== cancelled), mirroring the backend double-booking rule.
+  readonly appointments = signal<Appointment[]>([]);
 
   readonly takenSlots = computed(() => {
     const d = this.date();
@@ -69,17 +61,35 @@ export class BookAppointmentComponent implements OnInit {
     const qp = this.route.snapshot.queryParamMap;
     if (qp.get('clientId')) this.clientId.set(qp.get('clientId')!);
     if (qp.get('date')) this.date.set(qp.get('date')!);
+
+    this.clientsApi.list().subscribe({
+      next: (clients) => this.clients.set(clients),
+      error: () => this.clients.set([]),
+    });
+    this.servicesApi.list().subscribe({
+      next: (services) => this.services.set(services),
+      error: () => this.services.set([]),
+    });
+    this.loadDay();
+  }
+
+  private loadDay(): void {
+    this.appointmentsApi.byDate(this.date()).subscribe({
+      next: (appts) => this.appointments.set(appts),
+      error: () => this.appointments.set([]),
+    });
   }
 
   onDateChange(value: string): void {
     this.date.set(value);
     this.startTime.set('');
     this.error.set('');
+    this.loadDay();
   }
 
   selectSlot(slot: string): void {
     if (this.takenSlots().has(slot)) {
-      // Demonstrates the 409 the backend returns for an already-booked slot.
+      // The backend returns 409 for an already-booked slot; surface it up-front.
       this.startTime.set('');
       this.error.set(`Time slot already booked — ${slot} on ${this.prettyDate(this.date())} is taken.`);
       return;
@@ -98,7 +108,34 @@ export class BookAppointmentComponent implements OnInit {
       this.error.set('Time slot already booked');
       return;
     }
-    this.success.set(true);
-    setTimeout(() => this.router.navigate(['/appointments'], { queryParams: { date: this.date() } }), 900);
+
+    this.submitting.set(true);
+    this.appointmentsApi
+      .create({
+        clientId: this.clientId(),
+        serviceId: this.serviceId(),
+        date: this.date(),
+        startTime: this.startTime(),
+      })
+      .subscribe({
+        next: () => {
+          this.success.set(true);
+          setTimeout(
+            () => this.router.navigate(['/appointments'], { queryParams: { date: this.date() } }),
+            900,
+          );
+        },
+        error: (err) => {
+          this.submitting.set(false);
+          // 409 → "Time slot already booked"; refresh the day so the slot shows as taken.
+          this.error.set(this.messageFrom(err) || 'Could not book appointment.');
+          this.loadDay();
+        },
+      });
+  }
+
+  private messageFrom(err: unknown): string {
+    const msg = (err as { error?: { message?: string | string[] } })?.error?.message;
+    return Array.isArray(msg) ? msg.join(', ') : (msg ?? '');
   }
 }

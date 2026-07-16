@@ -1,9 +1,10 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Service } from '../../core/models';
 import { formatMoney } from '../../core/date-util';
 import { AuthService } from '../../core/services/auth.service';
+import { ServicesApiService } from '../../core/services/services-api.service';
 
 @Component({
   selector: 'app-services',
@@ -12,16 +13,19 @@ import { AuthService } from '../../core/services/auth.service';
   templateUrl: './services.component.html',
   styleUrl: './services.component.css',
 })
-export class ServicesComponent {
+export class ServicesComponent implements OnInit {
+  private readonly api = inject(ServicesApiService);
   readonly money = formatMoney;
 
-  // Mock data — service_agent wires this signal to GET /api/services.
-  readonly services = signal<Service[]>([
-    { id: 's1', name: 'Haircut', durationMin: 30, priceCents: 2500, createdAt: '2025-10-01' },
-    { id: 's2', name: 'Beard Trim', durationMin: 20, priceCents: 1500, createdAt: '2025-10-01' },
-    { id: 's3', name: 'Color & Style', durationMin: 90, priceCents: 8500, createdAt: '2025-10-05' },
-    { id: 's4', name: 'Deep Conditioning', durationMin: 45, priceCents: 4000, createdAt: '2025-10-12' },
-  ]);
+  // Wired to GET /api/v1/services.
+  readonly services = signal<Service[]>([]);
 
   constructor(public auth: AuthService) {}
+
+  ngOnInit(): void {
+    this.api.list().subscribe({
+      next: (services) => this.services.set(services),
+      error: () => this.services.set([]),
+    });
+  }
 }

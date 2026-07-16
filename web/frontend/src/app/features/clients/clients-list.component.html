@@ -1,0 +1,47 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Clients</h1>
+      <p class="page-sub">{{ filtered().length }} of {{ clients().length }} clients</p>
+    </div>
+    <a class="btn btn-primary" routerLink="/clients/new">+ New client</a>
+  </div>
+
+  <div class="toolbar">
+    <div class="search">
+      <span class="search-ico">🔍</span>
+      <input
+        class="input"
+        type="search"
+        placeholder="Search by name or phone…"
+        [value]="query()"
+        (input)="onSearch($any($event.target).value)"
+        aria-label="Search clients"
+      />
+    </div>
+  </div>
+
+  <div class="card">
+    @if (filtered().length === 0) {
+      <div class="state">
+        <div class="state-icon">🔎</div>
+        <p>No clients match “{{ query() }}”.</p>
+        <a class="btn btn-ghost" routerLink="/clients/new">Add a new client</a>
+      </div>
+    } @else {
+      <ul class="list">
+        @for (c of filtered(); track c.id) {
+          <li class="list-row">
+            <span class="avatar">{{ c.name.charAt(0) }}</span>
+            <div class="appt-main">
+              <a class="appt-client" [routerLink]="['/clients', c.id]">{{ c.name }}</a>
+              <span class="appt-service">{{ c.email || 'No email on file' }}</span>
+            </div>
+            <span class="appt-phone">{{ c.phone }}</span>
+            <a class="btn btn-ghost btn-sm" [routerLink]="['/clients', c.id]">View →</a>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>

@@ -1,0 +1,57 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Today</h1>
+      <p class="page-sub">{{ prettyToday }}</p>
+    </div>
+    <a class="btn btn-primary" routerLink="/appointments/new">+ Book appointment</a>
+  </div>
+
+  <div class="stat-row">
+    <div class="card stat">
+      <span class="stat-num">{{ ordered().length }}</span>
+      <span class="stat-label">Appointments today</span>
+    </div>
+    <div class="card stat">
+      <span class="stat-num">{{ scheduledCount() }}</span>
+      <span class="stat-label">Scheduled</span>
+    </div>
+    <div class="card stat">
+      <span class="stat-num">{{ completedCount() }}</span>
+      <span class="stat-label">Completed</span>
+    </div>
+    <a class="card stat stat-link" [routerLink]="['/appointments']" [queryParams]="{ date: tomorrow }">
+      <span class="stat-num">{{ tomorrowCount() }}</span>
+      <span class="stat-label">Tomorrow →</span>
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">Schedule</h2>
+      <a class="muted" [routerLink]="['/appointments']" [queryParams]="{ date: today }">Open day view</a>
+    </div>
+
+    @if (ordered().length === 0) {
+      <div class="state">
+        <div class="state-icon">🌤️</div>
+        <p>No appointments booked for today.</p>
+        <a class="btn btn-primary" routerLink="/appointments/new">Book the first one</a>
+      </div>
+    } @else {
+      <ul class="appt-list">
+        @for (a of ordered(); track a.id) {
+          <li class="appt-row">
+            <span class="appt-time">{{ a.startTime }}</span>
+            <div class="appt-main">
+              <a class="appt-client" [routerLink]="['/clients', a.clientId]">{{ a.clientName }}</a>
+              <span class="appt-service">{{ a.serviceName }} · {{ money(a.priceCents) }}</span>
+            </div>
+            <a class="appt-phone" [href]="'tel:' + a.clientPhone">{{ a.clientPhone }}</a>
+            <span class="badge" [class]="'badge-' + a.status">{{ a.status.replace('_', '-') }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>

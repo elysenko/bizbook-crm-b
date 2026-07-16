@@ -1,0 +1,68 @@
+<div class="shell">
+  <header class="topbar">
+    <button class="hamburger" type="button" (click)="toggleDrawer()" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+
+    <a class="brand" routerLink="/today">
+      <span class="brand-mark">B</span>
+      <span class="brand-name">BizBook</span>
+    </a>
+
+    <nav class="topnav">
+      @for (item of nav; track item.path) {
+        <a
+          class="topnav-link"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+        >
+          <span class="nav-ico" aria-hidden="true">{{ item.icon }}</span>
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+
+    <span class="spacer"></span>
+
+    <div class="user-chip">
+      <div class="user-meta">
+        <span class="user-name">{{ auth.user()?.name }}</span>
+        <span class="badge badge-role">{{ auth.role() }}</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" type="button" (click)="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- Mobile drawer -->
+  @if (drawerOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawer()"></div>
+    <aside class="drawer" role="dialog" aria-label="Navigation">
+      <div class="drawer-head">
+        <span class="brand-name">BizBook</span>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="closeDrawer()" aria-label="Close">✕</button>
+      </div>
+      <div class="drawer-user">
+        <span class="user-name">{{ auth.user()?.name }}</span>
+        <span class="badge badge-role">{{ auth.role() }}</span>
+      </div>
+      <nav class="drawer-nav">
+        @for (item of nav; track item.path) {
+          <a
+            class="drawer-link"
+            [routerLink]="item.path"
+            routerLinkActive="active"
+            (click)="closeDrawer()"
+          >
+            <span class="nav-ico" aria-hidden="true">{{ item.icon }}</span>
+            {{ item.label }}
+          </a>
+        }
+      </nav>
+      <button class="btn btn-ghost btn-block" type="button" (click)="logout()">Logout</button>
+    </aside>
+  }
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>

@@ -1,0 +1,70 @@
+<div class="page">
+  <div class="page-head">
+    <a class="back-link" routerLink="/clients">← Clients</a>
+  </div>
+
+  @if (client(); as c) {
+    <div class="detail-grid">
+      <aside class="card card-pad contact-card">
+        <div class="contact-head">
+          <span class="avatar-lg">{{ c.name.charAt(0) }}</span>
+          <div>
+            <h1 class="page-title">{{ c.name }}</h1>
+            <p class="muted">Client since {{ prettyDate(c.createdAt) }}</p>
+          </div>
+        </div>
+
+        <dl class="contact-list">
+          <div><dt>Phone</dt><dd><a [href]="'tel:' + c.phone">{{ c.phone }}</a></dd></div>
+          <div><dt>Email</dt><dd>{{ c.email || '—' }}</dd></div>
+          <div><dt>Notes</dt><dd>{{ c.notes || 'No notes yet.' }}</dd></div>
+        </dl>
+
+        <div class="contact-actions">
+          <a class="btn btn-ghost btn-block" [routerLink]="['/clients', c.id, 'edit']">Edit client</a>
+          <a class="btn btn-primary btn-block" routerLink="/appointments/new" [queryParams]="{ clientId: c.id }">Book appointment</a>
+        </div>
+      </aside>
+
+      <section class="stack history">
+        <div class="card">
+          <div class="card-head"><h2 class="card-title">Upcoming</h2><span class="tag">{{ upcoming().length }}</span></div>
+          @if (upcoming().length === 0) {
+            <div class="state"><p>No upcoming appointments.</p></div>
+          } @else {
+            <ul class="appt-list">
+              @for (a of upcoming(); track a.id) {
+                <li class="appt-row">
+                  <span class="appt-date">{{ prettyDate(a.date) }}</span>
+                  <span class="appt-time">{{ a.startTime }}</span>
+                  <div class="appt-main"><span class="appt-client">{{ a.serviceName }}</span><span class="appt-service">{{ money(a.priceCents) }}</span></div>
+                  <span class="badge" [class]="'badge-' + a.status">{{ a.status.replace('_','-') }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2 class="card-title">Past history</h2><span class="tag">{{ past().length }}</span></div>
+          @if (past().length === 0) {
+            <div class="state"><p>No past appointments.</p></div>
+          } @else {
+            <ul class="appt-list">
+              @for (a of past(); track a.id) {
+                <li class="appt-row">
+                  <span class="appt-date">{{ prettyDate(a.date) }}</span>
+                  <span class="appt-time">{{ a.startTime }}</span>
+                  <div class="appt-main"><span class="appt-client">{{ a.serviceName }}</span><span class="appt-service">{{ money(a.priceCents) }}</span></div>
+                  <span class="badge" [class]="'badge-' + a.status">{{ a.status.replace('_','-') }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </section>
+    </div>
+  } @else {
+    <div class="card"><div class="state"><div class="state-icon">🗂️</div><p>Client not found.</p><a class="btn btn-ghost" routerLink="/clients">Back to clients</a></div></div>
+  }
+</div>

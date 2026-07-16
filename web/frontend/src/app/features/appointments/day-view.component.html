@@ -1,0 +1,56 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Day view</h1>
+      <p class="page-sub">{{ prettySelected() }}</p>
+    </div>
+    <a class="btn btn-primary" routerLink="/appointments/new" [queryParams]="{ date: selectedDate() }">+ Book appointment</a>
+  </div>
+
+  <div class="daybar card">
+    <button class="btn btn-ghost btn-sm" type="button" (click)="shiftDay(-1)" aria-label="Previous day">←</button>
+    <input
+      class="input date-input"
+      type="date"
+      [value]="selectedDate()"
+      (change)="goToDate($any($event.target).value)"
+      aria-label="Select date"
+    />
+    <button class="btn btn-ghost btn-sm" type="button" (click)="shiftDay(1)" aria-label="Next day">→</button>
+    <span class="spacer"></span>
+    <span class="tag">{{ dayList().length }} appointment(s)</span>
+  </div>
+
+  <div class="card">
+    @if (dayList().length === 0) {
+      <div class="state">
+        <div class="state-icon">🗓️</div>
+        <p>No appointments on this day.</p>
+        <a class="btn btn-primary" routerLink="/appointments/new" [queryParams]="{ date: selectedDate() }">Book an appointment</a>
+      </div>
+    } @else {
+      <ul class="appt-list">
+        @for (a of dayList(); track a.id) {
+          <li class="appt-row day-row">
+            <span class="appt-time">{{ a.startTime }}</span>
+            <div class="appt-main">
+              <a class="appt-client" [routerLink]="['/clients', a.clientId]">{{ a.clientName }}</a>
+              <span class="appt-service">{{ a.serviceName }} · {{ money(a.priceCents) }} · {{ a.clientPhone }}</span>
+            </div>
+            <span class="badge" [class]="'badge-' + a.status">{{ a.status.replace('_','-') }}</span>
+            <div class="status-actions">
+              @for (opt of statusOptions; track opt) {
+                <button
+                  type="button"
+                  class="status-btn"
+                  [class.active]="a.status === opt"
+                  (click)="setStatus(a.id, opt)"
+                >{{ opt.replace('_','-') }}</button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>

@@ -1,0 +1,10 @@
+:host { display: block; }
+
+.banner-names { display: inline-flex; gap: var(--space-2); flex-wrap: wrap; margin-left: var(--space-2); }
+.setting-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
+.setting-key {
+  display: inline-block; margin-top: 4px; font-size: 0.8rem;
+  color: var(--color-text-muted); background: var(--color-surface-2);
+  padding: 2px 8px; border-radius: var(--radius-sm);
+}
+.setting-fields label code { color: var(--color-text-faint); font-weight: 500; font-size: 0.8rem; }

@@ -1,0 +1,56 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Admin settings</h1>
+      <p class="page-sub">Configure external service credentials</p>
+    </div>
+  </div>
+
+  @if (unconfigured().length > 0) {
+    <div class="alert alert-warn" style="margin-bottom: var(--space-4)">
+      ⚠ The following need credentials to activate:
+      <span class="banner-names">
+        @for (s of unconfigured(); track s.key) {
+          <span class="tag">{{ s.label }}</span>
+        }
+      </span>
+    </div>
+  }
+
+  <div class="stack">
+    @for (s of settings(); track s.key) {
+      <div class="card card-pad setting">
+        <div class="setting-head">
+          <div>
+            <h2 class="card-title">{{ s.label }}</h2>
+            <code class="setting-key">{{ s.key }}</code>
+          </div>
+          @if (s.configured) {
+            <span class="badge badge-ok">Configured</span>
+          } @else {
+            <span class="badge badge-off">Not configured</span>
+          }
+        </div>
+
+        <div class="setting-fields stack">
+          @for (f of s.fields; track f.key) {
+            <div class="field">
+              <label [for]="f.key">{{ f.label }} <code>({{ f.key }})</code></label>
+              <input
+                [id]="f.key"
+                class="input"
+                type="text"
+                [placeholder]="f.placeholder"
+                [(ngModel)]="f.value"
+              />
+            </div>
+          }
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" (click)="save(s.key)">Save credentials</button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

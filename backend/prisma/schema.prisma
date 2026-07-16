@@ -19,6 +19,12 @@ enum Role {
   user
 }
 
+enum AppointmentStatus {
+  scheduled
+  completed
+  cancelled
+  no_show
+}
 
 model User {
   id            String    @id @default(uuid())
@@ -31,5 +37,53 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   //Relations and Indexes
- 
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String
+  email     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  appointments Appointment[]
+
+  @@index([name])
+  @@index([phone])
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  name        String
+  durationMin Int
+  priceCents  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  appointments Appointment[]
+}
+
+model Appointment {
+  id        String            @id @default(uuid())
+  date      DateTime // date-only (time component ignored)
+  startTime String // "HH:MM" 30-min increments, business day 08:00-18:00
+  status    AppointmentStatus @default(scheduled)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  // Relations
+  clientId  String
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  // Active double-booking is enforced in the service layer (status != cancelled);
+  // this index backs the (date, startTime) lookup and the day-view query.
+  @@index([date, startTime])
+  @@index([clientId])
+  @@index([serviceId])
 }

@@ -1,0 +1,46 @@
+<div class="page page-narrow">
+  <div class="page-head">
+    <div>
+      <a class="back-link" routerLink="/clients">← Clients</a>
+      <h1 class="page-title">{{ isEdit ? 'Edit client' : 'New client' }}</h1>
+    </div>
+  </div>
+
+  <div class="card card-pad">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="stack">
+      <div class="field">
+        <label for="name">Name <span class="req">*</span></label>
+        <input id="name" class="input" type="text" formControlName="name" placeholder="Full name" />
+        @if (form.get('name')?.invalid && form.get('name')?.touched) {
+          <span class="field-error">Name is required.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="phone">Phone <span class="req">*</span></label>
+        <input id="phone" class="input" type="tel" formControlName="phone" placeholder="(555) 555-0100" />
+        @if (form.get('phone')?.invalid && form.get('phone')?.touched) {
+          <span class="field-error">Phone number is required.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" class="input" type="email" formControlName="email" placeholder="name@email.com" />
+        @if (form.get('email')?.errors?.['email'] && form.get('email')?.touched) {
+          <span class="field-error">Enter a valid email address.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="notes">Notes</label>
+        <textarea id="notes" class="textarea" formControlName="notes" placeholder="Preferences, allergies, reminders…"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="cancel()">Cancel</button>
+        <button type="submit" class="btn btn-primary">{{ isEdit ? 'Save changes' : 'Create client' }}</button>
+      </div>
+    </form>
+  </div>
+</div>

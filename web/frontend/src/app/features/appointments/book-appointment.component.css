@@ -1,0 +1,22 @@
+:host { display: block; }
+.date-input { width: auto; min-width: 180px; }
+
+.slot-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--space-2);
+}
+.slot {
+  position: relative; min-height: 46px; padding: 6px 8px;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-text);
+  font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums;
+  font-family: inherit; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+.slot:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
+.slot.selected { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.slot.taken {
+  background: var(--status-cancelled-soft); color: var(--color-text-faint);
+  border-style: dashed; cursor: not-allowed;
+}
+.slot.taken:hover { border-color: var(--color-danger); background: var(--color-danger-soft); }
+.slot-tag { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }

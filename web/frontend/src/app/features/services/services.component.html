@@ -1,0 +1,34 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Services</h1>
+      <p class="page-sub">{{ services().length }} services in the catalog</p>
+    </div>
+    @if (auth.isAdmin()) {
+      <a class="btn btn-primary" routerLink="/services/new">+ New service</a>
+    }
+  </div>
+
+  @if (!auth.isAdmin()) {
+    <div class="alert alert-info" style="margin-bottom: var(--space-4)">
+      You have view-only access to the catalog. Ask an admin to add or edit services.
+    </div>
+  }
+
+  <div class="grid">
+    @for (s of services(); track s.id) {
+      <div class="card svc-card">
+        <div class="svc-body">
+          <h3 class="svc-name">{{ s.name }}</h3>
+          <div class="svc-meta">
+            <span class="tag">⏱ {{ s.durationMin }} min</span>
+            <span class="svc-price">{{ money(s.priceCents) }}</span>
+          </div>
+        </div>
+        @if (auth.isAdmin()) {
+          <a class="btn btn-ghost btn-sm svc-edit" [routerLink]="['/services', s.id, 'edit']">Edit</a>
+        }
+      </div>
+    }
+  </div>
+</div>

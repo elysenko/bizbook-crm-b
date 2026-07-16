@@ -1,0 +1,43 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Revenue</h1>
+      <p class="page-sub">Completed appointments, grouped by month</p>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="card stat">
+      <span class="stat-num">{{ money(totalCents()) }}</span>
+      <span class="stat-label">Total collected</span>
+    </div>
+    <div class="card stat">
+      <span class="stat-num">{{ totalCount() }}</span>
+      <span class="stat-label">Completed appointments</span>
+    </div>
+    <div class="card stat">
+      <span class="stat-num">{{ months().length }}</span>
+      <span class="stat-label">Months tracked</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Monthly breakdown</h2></div>
+    @if (months().length === 0) {
+      <div class="state"><div class="state-icon">📊</div><p>No completed appointments yet.</p></div>
+    } @else {
+      <ul class="rev-list">
+        @for (m of months(); track m.month) {
+          <li class="rev-row">
+            <span class="rev-month">{{ prettyMonth(m.month) }}</span>
+            <div class="rev-bar-wrap">
+              <div class="rev-bar" [style.width]="barWidth(m.totalCents)"></div>
+            </div>
+            <span class="rev-count">{{ m.count }} appts</span>
+            <span class="rev-total">{{ money(m.totalCents) }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>

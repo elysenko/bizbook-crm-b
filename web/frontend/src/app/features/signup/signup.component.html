@@ -1,0 +1,50 @@
+<div class="auth-wrap">
+  <div class="auth-card card">
+    <div class="auth-brand">
+      <span class="brand-mark">B</span>
+      <span class="brand-name">BizBook</span>
+    </div>
+    <h1 class="auth-title">Create your business</h1>
+    <p class="auth-sub">The first account becomes the owner (ADMIN).</p>
+
+    <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="stack">
+      <div class="field">
+        <label for="name">Your name</label>
+        <input id="name" class="input" type="text" formControlName="name" placeholder="Jordan Rivera" autocomplete="name" />
+        @if (signupForm.get('name')?.invalid && signupForm.get('name')?.touched) {
+          <span class="field-error">Name is required.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" class="input" type="email" formControlName="email" placeholder="you@business.com" autocomplete="email" />
+        @if (signupForm.get('email')?.invalid && signupForm.get('email')?.touched) {
+          <span class="field-error">Enter a valid email address.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" class="input" type="password" formControlName="password" placeholder="At least 6 characters" autocomplete="new-password" />
+        @if (signupForm.get('password')?.invalid && signupForm.get('password')?.touched) {
+          <span class="field-error">Password must be at least 6 characters.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="confirm">Confirm password</label>
+        <input id="confirm" class="input" type="password" formControlName="confirm" placeholder="Re-enter password" autocomplete="new-password" />
+        @if (signupForm.errors?.['mismatch'] && signupForm.get('confirm')?.touched) {
+          <span class="field-error">Passwords do not match.</span>
+        }
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Create account</button>
+    </form>
+
+    <p class="auth-alt">
+      Already have an account? <a routerLink="/login">Sign in</a>
+    </p>
+  </div>
+</div>

@@ -1,0 +1,68 @@
+<div class="page page-narrow">
+  <div class="page-head">
+    <div>
+      <a class="back-link" routerLink="/appointments">← Day view</a>
+      <h1 class="page-title">Book appointment</h1>
+    </div>
+  </div>
+
+  <div class="card card-pad stack">
+    @if (success()) {
+      <div class="alert" style="background: var(--color-success-soft); color: var(--color-success)">
+        ✓ Appointment booked — status <strong>scheduled</strong>. Opening the day view…
+      </div>
+    }
+
+    <div class="field">
+      <label for="client">Client <span class="req">*</span></label>
+      <select id="client" class="select" [ngModel]="clientId()" (ngModelChange)="clientId.set($event)">
+        <option value="">Select a client…</option>
+        @for (c of clients(); track c.id) {
+          <option [value]="c.id">{{ c.name }} — {{ c.phone }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="service">Service <span class="req">*</span></label>
+      <select id="service" class="select" [ngModel]="serviceId()" (ngModelChange)="serviceId.set($event)">
+        <option value="">Select a service…</option>
+        @for (s of services(); track s.id) {
+          <option [value]="s.id">{{ s.name }} — {{ s.durationMin }} min · {{ money(s.priceCents) }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="date">Date <span class="req">*</span></label>
+      <input id="date" class="input date-input" type="date" [value]="date()" (change)="onDateChange($any($event.target).value)" />
+    </div>
+
+    <div class="field">
+      <label>Time slot <span class="req">*</span> <span class="hint">30-min slots · 08:00–18:00</span></label>
+      <div class="slot-grid">
+        @for (slot of slots; track slot) {
+          <button
+            type="button"
+            class="slot"
+            [class.taken]="takenSlots().has(slot)"
+            [class.selected]="startTime() === slot"
+            (click)="selectSlot(slot)"
+          >
+            {{ slot }}
+            @if (takenSlots().has(slot)) { <span class="slot-tag">booked</span> }
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (error()) {
+      <div class="alert alert-error">{{ error() }}</div>
+    }
+
+    <div class="form-actions">
+      <a class="btn btn-ghost" routerLink="/appointments">Cancel</a>
+      <button type="button" class="btn btn-primary" [disabled]="!canSubmit()" (click)="book()">Book appointment</button>
+    </div>
+  </div>
+</div>

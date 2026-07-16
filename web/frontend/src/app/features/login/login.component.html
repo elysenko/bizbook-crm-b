@@ -1,0 +1,37 @@
+<div class="auth-wrap">
+  <div class="auth-card card">
+    <div class="auth-brand">
+      <span class="brand-mark">B</span>
+      <span class="brand-name">BizBook</span>
+    </div>
+    <h1 class="auth-title">Welcome back</h1>
+    <p class="auth-sub">Sign in to manage clients, bookings and revenue.</p>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="stack">
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" class="input" type="email" formControlName="email" placeholder="you@business.com" autocomplete="email" />
+        @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+          <span class="field-error">Enter a valid email address.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" class="input" type="password" formControlName="password" placeholder="••••••••" autocomplete="current-password" />
+        @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+          <span class="field-error">Password is required.</span>
+        }
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+    </form>
+
+    <p class="auth-alt">
+      New business? <a routerLink="/signup">Create an account</a>
+    </p>
+
+    <div class="demo-divider"><span>or</span></div>
+    <button type="button" class="demo-btn" (click)="demoLogin()">Skip login — explore Demo Mode →</button>
+  </div>
+</div>

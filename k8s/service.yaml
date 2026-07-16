@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bizbook-crm-b
+  namespace: colossus-bizbook-crm-b
+  labels:
+    app: bizbook-crm-b
+    managed-by: colossus
+spec:
+  type: ClusterIP
+  selector:
+    app: bizbook-crm-b
+  ports:
+    - port: 80
+      targetPort: 80

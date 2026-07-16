@@ -2,21 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
+import { SignupDto } from './dto/signup.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-import { HttpStatus } from '@nestjs/common';
 import { User } from 'src/user/entities/user.entity';
 import { Role } from '../generated/prisma/client';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: jest.Mocked<AuthService>;
-
-  const mockResponse = () => {
-    const res: any = {};
-    res.status = jest.fn().mockReturnValue(res);
-    res.send = jest.fn().mockReturnValue(res);
-    return res;
-  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,9 +18,11 @@ describe('AuthController', () => {
         {
           provide: AuthService,
           useValue: {
-            registerUser: jest.fn(),
+            signup: jest.fn(),
             loginUser: jest.fn(),
+            registerUser: jest.fn(),
             refreshToken: jest.fn(),
+            me: jest.fn(),
           },
         },
       ],
@@ -37,97 +32,74 @@ describe('AuthController', () => {
     authService = module.get(AuthService);
   });
 
-  describe('constructor', () => {
-    it('should initialize controller with authService', () => {
-      expect(controller).toBeDefined();
-      expect(authService).toBeDefined();
-    });
+  it('should initialize controller with authService', () => {
+    expect(controller).toBeDefined();
+    expect(authService).toBeDefined();
   });
 
-  describe('register', () => {
-    it('should register a new user', async () => {
-      const registerDto: RegisterUserDto = {
-        name: 'Test User',
-        email: 'test@example.com',
-        password: 'password123',
-        passwordconf: 'password123',
-        image: null,
-      };
+  describe('signup', () => {
+    it('delegates to authService.signup', async () => {
+      const dto: SignupDto = { name: 'A', email: 'a@example.com', password: 'password123' };
+      const expected = { user: { id: 'u1', role: 'ADMIN' }, token: 'tok' } as any;
+      authService.signup.mockResolvedValue(expected);
 
-      const expectedResult = {
-        user: {
-          id: 1,
-          name: 'Test User',
-          email: 'test@example.com',
-        },
-        token: 'mock-token',
-      };
+      const result = await controller.signup(dto);
 
-      authService.registerUser.mockResolvedValue(expectedResult);
-
-      const result = await controller.register(registerDto);
-
-      expect(result).toEqual(expectedResult);
-      expect(authService.registerUser).toHaveBeenCalledWith(registerDto);
-    });
-
-    it('should handle registration error', async () => {
-      const registerDto: RegisterUserDto = {
-        name: 'Test User',
-        email: 'test@example.com',
-        password: 'password123',
-        passwordconf: 'password123',
-        image: null,
-      };
-
-      const error = new Error('Registration failed');
-      authService.registerUser.mockRejectedValue(error);
-
-      await expect(controller.register(registerDto)).rejects.toThrow(error);
-      expect(authService.registerUser).toHaveBeenCalledWith(registerDto);
+      expect(result).toEqual(expected);
+      expect(authService.signup).toHaveBeenCalledWith(dto);
     });
   });
 
   describe('login', () => {
-    it('should login a user', async () => {
-      const loginDto: LoginUserDto = {
-        email: 'test@example.com',
-        password: 'password123',
-      };
+    it('delegates to authService.loginUser and returns the result', async () => {
+      const loginDto: LoginUserDto = { email: 'test@example.com', password: 'password123' };
+      const expected = { user: { id: 'u1' }, token: 'mock-token' } as any;
+      authService.loginUser.mockResolvedValue(expected);
 
-      const expectedResult = {
-        user: {
-          id: 1,
-          name: 'Test User',
-          email: 'test@example.com',
-        },
-        token: 'mock-token',
-      };
+      const result = await controller.login(loginDto);
 
-      const res = mockResponse();
-      authService.loginUser.mockResolvedValue(expectedResult);
-
-      await controller.login(res, loginDto);
-
+      expect(result).toEqual(expected);
       expect(authService.loginUser).toHaveBeenCalledWith(loginDto.email, loginDto.password);
-      expect(res.status).toHaveBeenCalledWith(HttpStatus.OK);
-      expect(res.send).toHaveBeenCalledWith(expectedResult);
     });
 
-    it('should handle login error', async () => {
-      const loginDto: LoginUserDto = {
-        email: 'test@example.com',
-        password: 'wrongpassword',
-      };
-
+    it('propagates login errors', async () => {
+      const loginDto: LoginUserDto = { email: 'test@example.com', password: 'wrong' };
       const error = new Error('Invalid credentials');
-      const res = mockResponse();
       authService.loginUser.mockRejectedValue(error);
 
-      await expect(controller.login(res, loginDto)).rejects.toThrow(error);
-      expect(authService.loginUser).toHaveBeenCalledWith(loginDto.email, loginDto.password);
-      expect(res.status).not.toHaveBeenCalled();
-      expect(res.send).not.toHaveBeenCalled();
+      await expect(controller.login(loginDto)).rejects.toThrow(error);
+    });
+  });
+
+  describe('me', () => {
+    it('returns the current user', () => {
+      const user = { id: 'u1', name: 'A', email: 'a@example.com', role: 'admin' } as any;
+      const expected = { id: 'u1', name: 'A', email: 'a@example.com', role: 'ADMIN' } as any;
+      authService.me.mockReturnValue(expected);
+
+      const result = controller.me(user);
+
+      expect(result).toEqual(expected);
+      expect(authService.me).toHaveBeenCalledWith(user);
+    });
+  });
+
+  describe('register', () => {
+    it('registers a new user', async () => {
+      const registerDto: RegisterUserDto = {
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'password123',
+        passwordconf: 'password123',
+        image: null,
+      };
+      const expected = { user: { id: 'u1' }, token: 'mock-token' } as any;
+      authService.registerUser.mockResolvedValue(expected);
+
+      const result = await controller.register(registerDto);
+
+      expect(result).toEqual(expected);
+      expect(authService.registerUser).toHaveBeenCalledWith(registerDto);
     });
   });
 
@@ -140,26 +112,13 @@ describe('AuthController', () => {
       role: userRole,
     };
 
-    it('should refresh the token', async () => {
-      const expectedResult = new Promise<{ user: User; token: string }>(resolve => {
-        resolve({
-          user: mockUser,
-          token: 'new-mock-token',
-        });
-      });
+    it('refreshes the token', async () => {
+      const expected = { user: mockUser as unknown as User, token: 'new-mock-token' };
+      authService.refreshToken.mockResolvedValue(expected);
 
-      authService.refreshToken.mockReturnValue(expectedResult);
-      const result = controller.refreshToken(mockUser as any);
+      const result = await controller.refreshToken(mockUser as any);
 
-      expect(result).toEqual(expectedResult);
-      expect(authService.refreshToken).toHaveBeenCalledWith(mockUser);
-    });
-
-    it('should handle refresh token error', async () => {
-      const error = new Error('Token refresh failed');
-      authService.refreshToken.mockRejectedValue(error);
-
-      await expect(controller.refreshToken(mockUser as any)).rejects.toThrow(error);
+      expect(result).toEqual(expected);
       expect(authService.refreshToken).toHaveBeenCalledWith(mockUser);
     });
   });

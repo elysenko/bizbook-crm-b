@@ -7,6 +7,11 @@ import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/user.module';
 import { validateConfig } from './common/config/env.config';
 import { HealthModule } from './health/health.module';
+import { ClientsModule } from './clients/clients.module';
+import { ServicesModule } from './services/services.module';
+import { AppointmentsModule } from './appointments/appointments.module';
+import { RevenueModule } from './revenue/revenue.module';
+import { AdminSettingsModule } from './admin/admin-settings.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -28,6 +33,11 @@ import { APP_GUARD } from '@nestjs/core';
     PrismaModule,
     UserModule,
     HealthModule,
+    ClientsModule,
+    ServicesModule,
+    AppointmentsModule,
+    RevenueModule,
+    AdminSettingsModule,
   ],
   controllers: [AppController],
   providers: [

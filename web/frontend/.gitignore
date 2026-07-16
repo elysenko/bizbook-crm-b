@@ -1,0 +1,14 @@
+# Angular build & tooling artifacts — never commit
+/dist
+/node_modules
+/.angular
+/coverage
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editors
+.DS_Store
+.vscode/*
+.idea
